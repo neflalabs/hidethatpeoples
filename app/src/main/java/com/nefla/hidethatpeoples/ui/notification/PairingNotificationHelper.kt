@@ -1,5 +1,6 @@
 package com.nefla.hidethatpeoples.ui.notification
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -37,7 +38,7 @@ object PairingNotificationHelper {
         }
     }
 
-    fun showPairingNotification(context: Context, detectedPort: Int? = null) {
+    fun buildNotification(context: Context, detectedPort: Int? = null): Notification {
         createNotificationChannel(context)
         if (detectedPort != null && detectedPort > 0) {
             lastDiscoveredPort = detectedPort
@@ -52,10 +53,10 @@ object PairingNotificationHelper {
             )
             .build()
 
-        val submitIntent = Intent(context, PairingNotificationReceiver::class.java).apply {
-            action = ACTION_SUBMIT_PAIRING
+        val submitIntent = Intent(context, PairingForegroundService::class.java).apply {
+            action = PairingForegroundService.ACTION_SUBMIT
         }
-        val submitPendingIntent = PendingIntent.getBroadcast(
+        val submitPendingIntent = PendingIntent.getService(
             context,
             0,
             submitIntent,
@@ -68,10 +69,10 @@ object PairingNotificationHelper {
             submitPendingIntent
         ).addRemoteInput(remoteInput).build()
 
-        val cancelIntent = Intent(context, PairingNotificationReceiver::class.java).apply {
-            action = ACTION_CANCEL_PAIRING
+        val cancelIntent = Intent(context, PairingForegroundService::class.java).apply {
+            action = PairingForegroundService.ACTION_STOP
         }
-        val cancelPendingIntent = PendingIntent.getBroadcast(
+        val cancelPendingIntent = PendingIntent.getService(
             context,
             1,
             cancelIntent,
@@ -97,7 +98,7 @@ object PairingNotificationHelper {
             "Mencari port via mDNS...\nBuka dialog 'Pair device with pairing code'.\nKetik format: [PORT] [KODE] (contoh: 39481 123456)"
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentTitle("Wireless ADB Pairing")
             .setContentText(portText)
@@ -109,7 +110,16 @@ object PairingNotificationHelper {
             .addAction(replyAction)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Batal", cancelPendingIntent)
             .build()
+    }
 
+    fun showPairingNotification(context: Context, detectedPort: Int? = null) {
+        if (detectedPort != null && detectedPort > 0) {
+            lastDiscoveredPort = detectedPort
+        }
+        PairingForegroundService.start(context, detectedPort)
+    }
+
+    fun notify(context: Context, notification: Notification) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
@@ -144,6 +154,7 @@ object PairingNotificationHelper {
     }
 
     fun cancelNotification(context: Context) {
+        PairingForegroundService.stop(context)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NOTIFICATION_ID)
     }

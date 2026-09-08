@@ -175,7 +175,7 @@ class AdbMdnsDiscovery(private val context: Context) {
         }
     }
 
-    private fun getLocalIpAddresses(): Set<String> {
+    internal fun getLocalIpAddresses(): Set<String> {
         val ips = mutableSetOf("127.0.0.1")
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces() ?: return ips

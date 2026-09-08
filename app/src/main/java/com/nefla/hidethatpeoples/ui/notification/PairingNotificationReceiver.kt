@@ -83,7 +83,7 @@ class PairingNotificationReceiver : BroadcastReceiver() {
                     } else {
                         val err = result.exceptionOrNull()?.localizedMessage ?: "Pairing ditolak oleh sistem"
                         Toast.makeText(context, "Pairing Gagal: $err", Toast.LENGTH_LONG).show()
-                        PairingNotificationHelper.showPairingNotification(context, port)
+                        PairingNotificationHelper.showErrorNotification(context, err)
                     }
                 }
             }

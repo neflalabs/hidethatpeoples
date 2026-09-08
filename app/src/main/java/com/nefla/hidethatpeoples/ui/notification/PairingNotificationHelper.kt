@@ -86,18 +86,22 @@ object PairingNotificationHelper {
         )
 
         val portText = if (lastDiscoveredPort != null) {
-            "🟢 Port $lastDiscoveredPort terdeteksi! Tarik ke bawah & ketik 6 digit kode."
+            "🟢 Port $lastDiscoveredPort terdeteksi! Tarik & ketik 6 digit kode."
         } else {
-            "Mencari port... Tarik ke bawah untuk ketik kode (atau format: PORT KODE)."
+            "Mencari port... Tarik & ketik format: [PORT] [KODE]"
+        }
+
+        val bigText = if (lastDiscoveredPort != null) {
+            "🟢 Port $lastDiscoveredPort terdeteksi!\nKetik 6 digit kode pairing dari layar Settings.\n(Jika port di dialog HP Anda berbeda, ketik: [PORT] [KODE], contoh: $lastDiscoveredPort 123456)"
+        } else {
+            "Mencari port via mDNS...\nBuka dialog 'Pair device with pairing code'.\nKetik format: [PORT] [KODE] (contoh: 39481 123456)"
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentTitle("Wireless ADB Pairing")
             .setContentText(portText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$portText\n\nDialog 'Pair device with pairing code' jangan ditutup. Ketik kode langsung dari notifikasi ini."
-            ))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .setAutoCancel(false)
@@ -118,15 +122,25 @@ object PairingNotificationHelper {
             .setContentText("Wireless ADB terhubung ($detail). Siap membersihkan Direct Share.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setTimeoutAfter(5000L)
+            .setTimeoutAfter(6000L)
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     fun showErrorNotification(context: Context, error: String) {
-        // Re-show notification with error and input still available
-        showPairingNotification(context, lastDiscoveredPort)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle("Pairing Gagal ❌")
+            .setContentText(error)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "$error\n\nPastikan dialog 'Pair device with pairing code' sedang terbuka di layar, periksa apakah port dan kode sesuai, lalu coba lagi."
+            ))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     fun cancelNotification(context: Context) {

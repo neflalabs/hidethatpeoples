@@ -45,7 +45,9 @@ class LocalAdbPrivilegeProvider(
     override val state: StateFlow<PrivilegeState> = _state.asStateFlow()
 
     private var discoveredPairingPort: Int? = null
+    private var discoveredPairingHost: String? = null
     private var discoveredConnectPort: Int? = null
+    private var discoveredConnectHost: String? = null
 
     init {
         // Initialize keypair in background
@@ -55,7 +57,7 @@ class LocalAdbPrivilegeProvider(
             } catch (e: Throwable) {
                 Log.e(TAG, "Error pre-loading keys", e)
             }
-            checkInitialStatus()
+            checkConnectionStatus()
         }
     }
 
@@ -71,26 +73,32 @@ class LocalAdbPrivilegeProvider(
         return "HideThatPeoples"
     }
 
-    private suspend fun checkInitialStatus() {
+    suspend fun checkConnectionStatus() = withContext(Dispatchers.IO) {
         if (isConnected()) {
-            _state.value = PrivilegeState.Ready(PrivilegeType.LOCAL_ADB, "$DEFAULT_HOST:$discoveredConnectPort")
-            return
+            _state.value = PrivilegeState.Ready(
+                type = PrivilegeType.LOCAL_ADB,
+                details = "${discoveredConnectHost ?: DEFAULT_HOST}:${prefs.lastAdbConnectPort}"
+            )
+            return@withContext
         }
 
         if (!prefs.isAdbPaired) {
             _state.value = PrivilegeState.PairingRequired(null)
             startPairingPortDiscovery()
-            return
+            return@withContext
         }
 
         // Already paired before, attempt quick connect
         val lastPort = prefs.lastAdbConnectPort
         if (lastPort > 0) {
             _state.value = PrivilegeState.Connecting
-            val success = tryConnect(DEFAULT_HOST, lastPort)
+            val success = tryConnect(lastPort)
             if (success) {
-                _state.value = PrivilegeState.Ready(PrivilegeType.LOCAL_ADB, "$DEFAULT_HOST:$lastPort")
-                return
+                _state.value = PrivilegeState.Ready(
+                    type = PrivilegeType.LOCAL_ADB,
+                    details = "${discoveredConnectHost ?: DEFAULT_HOST}:$lastPort"
+                )
+                return@withContext
             }
         }
 
@@ -104,13 +112,15 @@ class LocalAdbPrivilegeProvider(
             try {
                 mdnsDiscovery.discoverServices(AdbMdnsDiscovery.SERVICE_TYPE_PAIRING)
                     .collect { service ->
-                        Log.d(TAG, "Discovered pairing service on port ${service.port}")
+                        val hostAddr = service.host.hostAddress ?: DEFAULT_HOST
+                        Log.d(TAG, "Discovered pairing service on $hostAddr:${service.port}")
                         discoveredPairingPort = service.port
+                        discoveredPairingHost = hostAddr
                         com.nefla.hidethatpeoples.ui.notification.PairingNotificationHelper.showPairingNotification(context, service.port)
                         if (_state.value !is PrivilegeState.Ready) {
                             _state.value = PrivilegeState.PairingRequired(
                                 detectedPort = service.port,
-                                hostIp = service.host.hostAddress ?: DEFAULT_HOST
+                                hostIp = hostAddr
                             )
                         }
                     }
@@ -134,9 +144,11 @@ class LocalAdbPrivilegeProvider(
                 var foundPort: Int? = null
                 mdnsDiscovery.discoverServices(AdbMdnsDiscovery.SERVICE_TYPE_CONNECT)
                     .collect { service ->
-                        Log.d(TAG, "Discovered active connect port: ${service.port}")
+                        val hostAddr = service.host.hostAddress ?: DEFAULT_HOST
+                        Log.d(TAG, "Discovered active connect port: $hostAddr:${service.port}")
                         foundPort = service.port
                         discoveredConnectPort = service.port
+                        discoveredConnectHost = hostAddr
                         prefs.lastAdbConnectPort = service.port
                         return@collect
                     }
@@ -144,14 +156,16 @@ class LocalAdbPrivilegeProvider(
             }
 
             if (discovered != null) {
-                val success = tryConnect(DEFAULT_HOST, discovered)
+                val success = tryConnect(discovered)
                 if (success) {
-                    _state.value = PrivilegeState.Ready(PrivilegeType.LOCAL_ADB, "$DEFAULT_HOST:$discovered")
+                    _state.value = PrivilegeState.Ready(
+                        type = PrivilegeType.LOCAL_ADB,
+                        details = "${discoveredConnectHost ?: DEFAULT_HOST}:$discovered"
+                    )
                 } else {
                     _state.value = PrivilegeState.Error("Failed to connect to ADB port $discovered")
                 }
             } else {
-                // If not found via mDNS, prompt pairing or check if wireless debugging is enabled
                 if (!prefs.isAdbPaired) {
                     _state.value = PrivilegeState.PairingRequired(discoveredPairingPort)
                 } else {
@@ -164,45 +178,80 @@ class LocalAdbPrivilegeProvider(
     suspend fun pair(pairingCode: String, port: Int? = null): Result<Unit> = withContext(Dispatchers.IO) {
         val targetPort = port ?: discoveredPairingPort
         if (targetPort == null || targetPort <= 0) {
-            return@withContext Result.failure(IllegalArgumentException("No valid pairing port detected. Please ensure 'Pair device with pairing code' is open."))
+            return@withContext Result.failure(IllegalArgumentException("Port belum terdeteksi. Buka 'Pair device with pairing code' di Settings."))
         }
 
         _state.value = PrivilegeState.Connecting
-        Log.i(TAG, "Attempting SPAKE2 pairing to $DEFAULT_HOST:$targetPort with code $pairingCode")
 
-        try {
-            val paired = pair(DEFAULT_HOST, targetPort, pairingCode.trim())
-            if (paired) {
-                Log.i(TAG, "Pairing successful!")
-                prefs.isAdbPaired = true
-                stopPairingPortDiscovery()
+        val candidateHosts = buildList<String> {
+            discoveredPairingHost?.let { add(it) }
+            add(DEFAULT_HOST)
+            addAll(mdnsDiscovery.getLocalIpAddresses())
+            add("localhost")
+        }.distinct()
 
-                // Immediately try connecting to the newly authorized ADB session
-                startConnectPortDiscoveryAndConnect()
-                Result.success(Unit)
-            } else {
-                val errMsg = "Pairing rejected by device. Please check the 6-digit code and try again."
-                Log.e(TAG, errMsg)
-                _state.value = PrivilegeState.Error(errMsg)
-                Result.failure(RuntimeException(errMsg))
+        Log.i(TAG, "Pairing candidates for port $targetPort: $candidateHosts")
+
+        var lastError: Throwable? = null
+        var isPaired = false
+
+        for (host in candidateHosts) {
+            try {
+                Log.i(TAG, "Attempting SPAKE2 pairing to $host:$targetPort with code $pairingCode")
+                val result = pair(host, targetPort, pairingCode.trim())
+                if (result) {
+                    isPaired = true
+                    Log.i(TAG, "Pairing successful via $host:$targetPort!")
+                    break
+                } else {
+                    Log.w(TAG, "Pairing returned false for $host:$targetPort")
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Pairing attempt failed on $host:$targetPort: ${e.message}")
+                lastError = e
             }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Pairing exception", e)
-            _state.value = PrivilegeState.Error("Pairing error: ${e.localizedMessage}", e)
-            Result.failure(e)
+        }
+
+        if (isPaired) {
+            prefs.isAdbPaired = true
+            stopPairingPortDiscovery()
+
+            // Immediately try connecting to the newly authorized ADB session
+            startConnectPortDiscoveryAndConnect()
+            Result.success(Unit)
+        } else {
+            val errMsg = lastError?.localizedMessage ?: "Pairing ditolak oleh sistem. Periksa port dan kode pairing."
+            Log.e(TAG, "All pairing attempts failed: $errMsg")
+            _state.value = PrivilegeState.Error("Pairing error: $errMsg")
+            Result.failure(lastError ?: RuntimeException(errMsg))
         }
     }
 
-    private suspend fun tryConnect(host: String, port: Int): Boolean = withContext(Dispatchers.IO) {
-        return@withContext try {
-            if (isConnected()) {
-                disconnect()
+    private suspend fun tryConnect(port: Int, preferredHost: String? = null): Boolean = withContext(Dispatchers.IO) {
+        val candidateHosts = buildList<String> {
+            preferredHost?.let { add(it) }
+            discoveredConnectHost?.let { add(it) }
+            add(DEFAULT_HOST)
+            addAll(mdnsDiscovery.getLocalIpAddresses())
+            add("localhost")
+        }.distinct()
+
+        for (host in candidateHosts) {
+            try {
+                if (isConnected()) {
+                    disconnect()
+                }
+                Log.d(TAG, "Trying to connect to ADB at $host:$port")
+                val success = connect(host, port)
+                if (success) {
+                    Log.i(TAG, "Successfully connected to ADB at $host:$port")
+                    return@withContext true
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed connecting to $host:$port: ${e.message}")
             }
-            connect(host, port)
-        } catch (e: Throwable) {
-            Log.w(TAG, "Failed connecting to $host:$port", e)
-            false
         }
+        return@withContext false
     }
 
     override suspend fun clearShortcuts(packageName: String): Result<String> = withContext(Dispatchers.IO) {
@@ -226,7 +275,6 @@ class LocalAdbPrivilegeProvider(
             Result.success(resultStr)
         } catch (e: Throwable) {
             Log.e(TAG, "Failed executing clear-shortcuts for $packageName", e)
-            // Mark disconnected if connection dropped
             if (!isConnected()) {
                 _state.value = PrivilegeState.Disconnected
             }
@@ -245,31 +293,37 @@ class LocalAdbPrivilegeProvider(
             val res = clearShortcuts(pkg)
             results[pkg] = res.isSuccess
         }
-        results
+        return@withContext results
     }
 
-    private suspend fun ensureConnected(): Boolean {
-        if (isConnected()) return true
+    private suspend fun ensureConnected(): Boolean = withContext(Dispatchers.IO) {
+        if (isConnected()) return@withContext true
 
-        val port = discoveredConnectPort ?: prefs.lastAdbConnectPort
+        val port = prefs.lastAdbConnectPort
         if (port > 0) {
-            val success = tryConnect(DEFAULT_HOST, port)
-            if (success) {
-                _state.value = PrivilegeState.Ready(PrivilegeType.LOCAL_ADB, "$DEFAULT_HOST:$port")
-                return true
-            }
+            if (tryConnect(port)) return@withContext true
         }
 
-        // Try quick discovery
         startConnectPortDiscoveryAndConnect()
-        return false
+        val timeoutMs = 4000L
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            if (isConnected()) return@withContext true
+            kotlinx.coroutines.delay(200)
+        }
+        return@withContext isConnected()
     }
 
     override fun release() {
         stopPairingPortDiscovery()
         connectJob?.cancel()
+        connectJob = null
         try {
-            disconnect()
-        } catch (_: Throwable) {}
+            if (isConnected()) {
+                disconnect()
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error disconnecting ADB on release", e)
+        }
     }
 }

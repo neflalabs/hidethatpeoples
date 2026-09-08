@@ -16,8 +16,10 @@ workRuntimeKtx = "2.10.0"
 shizuku = "13.1.5"
 libadb = "3.1.1"
 bouncycastle = "1.81"
+conscrypt = "2.5.2"
 
 [libraries]
+conscrypt-android = { group = "org.conscrypt", name = "conscrypt-android", version.ref = "conscrypt" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }

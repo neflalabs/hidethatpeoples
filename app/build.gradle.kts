@@ -59,6 +59,7 @@ dependencies {
     // Standalone Local ADB (Wireless Debugging)
     implementation(libs.libadb.android)
     implementation(libs.bcpkix)
+    implementation(libs.conscrypt.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

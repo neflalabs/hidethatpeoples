@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">HideThatPeoples</string>
+    <string name="tile_name">Hide Peoples</string>
+    <string name="tile_subtitle">Clear share contacts</string>
+</resources>

@@ -1,0 +1,8 @@
+com.nefla.hidethatpeoples
+color ic_launcher_background
+drawable ic_hide_contacts
+drawable ic_launcher_foreground
+mipmap ic_launcher
+string app_name
+string tile_name
+string tile_subtitle

@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.nefla.hidethatpeoples.app-debug-58:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.nefla.hidethatpeoples.app-main-60:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.nefla.hidethatpeoples.app-debug-58:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.nefla.hidethatpeoples.app-main-60:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.nefla.hidethatpeoples.app-debug-58:/drawable_ic_hide_contacts.xml.flat",
+        "source": "com.nefla.hidethatpeoples.app-main-60:/drawable/ic_hide_contacts.xml"
+    }
+]

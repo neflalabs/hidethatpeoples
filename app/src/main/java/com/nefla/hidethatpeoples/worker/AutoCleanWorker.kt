@@ -25,8 +25,9 @@ class AutoCleanWorker(
             return Result.success()
         }
 
-        if (!ShizukuManager.isReady()) {
-            Log.w(TAG, "Shizuku is not ready. Skipping auto-clean.")
+        val privilegeManager = com.nefla.hidethatpeoples.privilege.PrivilegeManager.getInstance(applicationContext)
+        if (!privilegeManager.isReady()) {
+            Log.w(TAG, "Privilege provider is not ready. Skipping auto-clean.")
             return Result.retry()
         }
 
@@ -35,7 +36,7 @@ class AutoCleanWorker(
             return Result.success()
         }
 
-        val results = ShizukuManager.clearMultipleShortcuts(targets)
+        val results = privilegeManager.clearMultipleShortcuts(targets)
         Log.d(TAG, "AutoCleanWorker completed with results: $results")
         prefs.lastClearedTimestamp = System.currentTimeMillis()
 

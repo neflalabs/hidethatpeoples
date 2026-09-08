@@ -60,4 +60,12 @@ class AppPreferences(context: Context) {
     var lastClearedTimestamp: Long
         get() = prefs.getLong(KEY_LAST_CLEARED_TIMESTAMP, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_CLEARED_TIMESTAMP, value).apply()
+
+    var isAdbPaired: Boolean
+        get() = prefs.getBoolean("is_adb_paired", false)
+        set(value) = prefs.edit().putBoolean("is_adb_paired", value).apply()
+
+    var lastAdbConnectPort: Int
+        get() = prefs.getInt("last_adb_connect_port", -1)
+        set(value) = prefs.edit().putInt("last_adb_connect_port", value).apply()
 }

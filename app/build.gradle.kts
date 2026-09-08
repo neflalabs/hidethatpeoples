@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 
+    // Standalone Local ADB (Wireless Debugging)
+    implementation(libs.libadb.android)
+    implementation(libs.bcpkix)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

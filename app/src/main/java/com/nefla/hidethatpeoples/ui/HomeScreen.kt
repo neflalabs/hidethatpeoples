@@ -1,8 +1,13 @@
 package com.nefla.hidethatpeoples.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.text.format.DateUtils
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,9 +27,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nefla.hidethatpeoples.data.AppPreferences
 import com.nefla.hidethatpeoples.data.TargetApp
-import com.nefla.hidethatpeoples.shizuku.ShizukuManager
+import com.nefla.hidethatpeoples.privilege.PrivilegeManager
+import com.nefla.hidethatpeoples.privilege.PrivilegeState
+import com.nefla.hidethatpeoples.privilege.PrivilegeType
+import com.nefla.hidethatpeoples.ui.components.PairingBottomSheet
+import com.nefla.hidethatpeoples.ui.components.openWirelessDebuggingSettings
+import com.nefla.hidethatpeoples.ui.notification.PairingNotificationHelper
 import com.nefla.hidethatpeoples.ui.theme.GreenOnline
 import com.nefla.hidethatpeoples.ui.theme.OrangeWarning
 import com.nefla.hidethatpeoples.ui.theme.RedOffline
@@ -34,8 +46,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    shizukuState: ShizukuManager.ShizukuState,
-    onRequestShizukuPermission: () -> Unit,
+    privilegeManager: PrivilegeManager,
     onRefreshState: () -> Unit
 ) {
     val context = LocalContext.current
@@ -43,11 +54,52 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val privilegeState by privilegeManager.activeState.collectAsStateWithLifecycle()
+    val preferredProvider by privilegeManager.preferredProviderType.collectAsStateWithLifecycle()
+
     var isClearing by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
+    var showPairingSheet by remember { mutableStateOf(false) }
     var enabledPackages by remember { mutableStateOf(prefs.enabledPackages) }
     var autoCleanEnabled by remember { mutableStateOf(prefs.isAutoCleanEnabled) }
     var lastClearedTimestamp by remember { mutableStateOf(prefs.lastClearedTimestamp) }
+
+    val triggerNotificationPairing: () -> Unit = {
+        privilegeManager.localAdbProvider.startPairingPortDiscovery()
+        PairingNotificationHelper.showPairingNotification(context)
+        openWirelessDebuggingSettings(context)
+        scope.launch {
+            snackbarHostState.showSnackbar("Notifikasi pairing dikirim! Tarik status bar ke bawah saat dialog kode muncul.")
+        }
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            triggerNotificationPairing()
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("Izin notifikasi dibutuhkan untuk pairing tanpa menutup aplikasi Settings.")
+            }
+        }
+    }
+
+    val startNotificationPairingFlow: () -> Unit = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permissionCheck = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                triggerNotificationPairing()
+            } else {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            triggerNotificationPairing()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -84,12 +136,16 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Shizuku Status Banner
+            // 1. Privilege Status Card (Local ADB / Shizuku)
             item {
-                ShizukuStatusCard(
-                    state = shizukuState,
-                    onRequestPermission = onRequestShizukuPermission,
-                    onOpenShizuku = {
+                PrivilegeStatusCard(
+                    state = privilegeState,
+                    preferredType = preferredProvider,
+                    onStartNotificationPairing = startNotificationPairingFlow,
+                    onOpenPairingSheet = { showPairingSheet = true },
+                    onConnectAdb = { privilegeManager.localAdbProvider.startConnectPortDiscoveryAndConnect() },
+                    onRequestShizukuPermission = { privilegeManager.shizukuProvider.requestPermission() },
+                    onOpenShizukuApp = {
                         val launchIntent = context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
                         if (launchIntent != null) {
                             context.startActivity(launchIntent)
@@ -100,6 +156,9 @@ fun HomeScreen(
                             )
                             context.startActivity(playStoreIntent)
                         }
+                    },
+                    onSwitchProvider = { newType ->
+                        privilegeManager.setPreferredProvider(newType)
                     }
                 )
             }
@@ -134,15 +193,15 @@ fun HomeScreen(
 
                         Button(
                             onClick = {
-                                if (!ShizukuManager.isReady()) {
+                                if (!privilegeManager.isReady()) {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Shizuku is not running or unauthorized!")
+                                        snackbarHostState.showSnackbar("Setup Wireless ADB or Shizuku first!")
                                     }
                                     return@Button
                                 }
                                 scope.launch {
                                     isClearing = true
-                                    val results = ShizukuManager.clearMultipleShortcuts(enabledPackages)
+                                    val results = privilegeManager.clearMultipleShortcuts(enabledPackages)
                                     val count = results.values.count { it }
                                     prefs.lastClearedTimestamp = System.currentTimeMillis()
                                     lastClearedTimestamp = prefs.lastClearedTimestamp
@@ -150,7 +209,7 @@ fun HomeScreen(
                                     snackbarHostState.showSnackbar("Cleared shortcuts for $count apps!")
                                 }
                             },
-                            enabled = !isClearing && shizukuState == ShizukuManager.ShizukuState.READY,
+                            enabled = !isClearing && privilegeState is PrivilegeState.Ready,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
@@ -216,7 +275,7 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "Add the 'Hide Peoples' tile to your phone's notification panel for 1-tap quick cleaning anytime.",
+                                text = "Add the 'Hide Peoples' tile to your notification panel for 1-tap quick cleaning anytime.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                             )
@@ -324,6 +383,18 @@ fun HomeScreen(
         }
     }
 
+    // Modal Pairing BottomSheet for Wireless ADB
+    if (showPairingSheet) {
+        val detectedPort = (privilegeState as? PrivilegeState.PairingRequired)?.detectedPort
+        PairingBottomSheet(
+            onDismissRequest = { showPairingSheet = false },
+            detectedPort = detectedPort,
+            onPair = { code, port ->
+                privilegeManager.pairLocalAdb(code, port)
+            }
+        )
+    }
+
     if (showHelpDialog) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = false },
@@ -335,11 +406,11 @@ fun HomeScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "Because Android restricts normal apps from tampering with other apps, HideThatPeoples uses Shizuku (ADB API via Wireless Debugging) to safely invoke the system shortcut cleaner.",
+                        "HideThatPeoples uses Built-in Wireless ADB (Android 11+) to invoke the system shortcut cleaner safely and completely standalone.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "• No Root required\n• Safe for Mobile Banking apps\n• Your device warranty remains intact",
+                        "• 100% Standalone (No extra app needed)\n• No Root required\n• Safe for Mobile Banking apps\n• Zero system modifications",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -355,26 +426,41 @@ fun HomeScreen(
 }
 
 @Composable
-fun ShizukuStatusCard(
-    state: ShizukuManager.ShizukuState,
-    onRequestPermission: () -> Unit,
-    onOpenShizuku: () -> Unit
+fun PrivilegeStatusCard(
+    state: PrivilegeState,
+    preferredType: PrivilegeType,
+    onStartNotificationPairing: () -> Unit,
+    onOpenPairingSheet: () -> Unit,
+    onConnectAdb: () -> Unit,
+    onRequestShizukuPermission: () -> Unit,
+    onOpenShizukuApp: () -> Unit,
+    onSwitchProvider: (PrivilegeType) -> Unit
 ) {
     val (statusColor, title, subtitle) = when (state) {
-        ShizukuManager.ShizukuState.READY -> Triple(
+        is PrivilegeState.Ready -> Triple(
             GreenOnline,
-            "Shizuku Connected",
-            "Ready to manage and clear direct share targets."
+            "${state.type.displayName} Terhubung",
+            "Siap membersihkan target Direct Share secara mandiri."
         )
-        ShizukuManager.ShizukuState.PERMISSION_REQUIRED -> Triple(
+        is PrivilegeState.PairingRequired -> Triple(
             OrangeWarning,
-            "Permission Required",
-            "Shizuku service is active, but HideThatPeoples needs your authorization."
+            "Perlu Pairing Wireless ADB",
+            "Pairing 1x dengan 6-digit kode via notifikasi tanpa menutup dialog Settings."
         )
-        ShizukuManager.ShizukuState.NOT_RUNNING -> Triple(
+        is PrivilegeState.Connecting -> Triple(
+            MaterialTheme.colorScheme.primary,
+            "Menghubungkan ke ADB...",
+            "Mencari port dan membangun koneksi aman via local loopback."
+        )
+        is PrivilegeState.Disconnected -> Triple(
             RedOffline,
-            "Shizuku Not Running",
-            "Please start Shizuku via Wireless Debugging or launch the Shizuku app."
+            "Layanan Terputus",
+            "Wireless Debugging sedang nonaktif atau belum terhubung."
+        )
+        is PrivilegeState.Error -> Triple(
+            RedOffline,
+            "Koneksi Gagal",
+            state.message
         )
     }
 
@@ -383,19 +469,25 @@ fun ShizukuStatusCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(statusColor)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -405,21 +497,59 @@ fun ShizukuStatusCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            AnimatedVisibility(visible = state != ShizukuManager.ShizukuState.READY) {
+            // Action Buttons based on state
+            AnimatedVisibility(visible = state !is PrivilegeState.Ready) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (state == ShizukuManager.ShizukuState.PERMISSION_REQUIRED) {
-                        Button(onClick = onRequestPermission) {
-                            Text("Grant Permission")
+                    when (state) {
+                        is PrivilegeState.PairingRequired -> {
+                            OutlinedButton(onClick = onOpenPairingSheet) {
+                                Text("Manual")
+                            }
+                            Button(onClick = onStartNotificationPairing) {
+                                Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pair via Notifikasi")
+                            }
                         }
-                    } else if (state == ShizukuManager.ShizukuState.NOT_RUNNING) {
-                        OutlinedButton(onClick = onOpenShizuku) {
-                            Text("Open Shizuku App")
+                        is PrivilegeState.Disconnected -> {
+                            if (preferredType == PrivilegeType.SHIZUKU) {
+                                Button(onClick = onOpenShizukuApp) {
+                                    Text("Buka Shizuku")
+                                }
+                            } else {
+                                OutlinedButton(onClick = onConnectAdb) {
+                                    Text("Hubungkan")
+                                }
+                                Button(onClick = onStartNotificationPairing) {
+                                    Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Pairing")
+                                }
+                            }
                         }
+                        is PrivilegeState.Error -> {
+                            if (preferredType == PrivilegeType.SHIZUKU) {
+                                Button(onClick = onRequestShizukuPermission) {
+                                    Text("Minta Izin")
+                                }
+                            } else {
+                                OutlinedButton(onClick = onConnectAdb) {
+                                    Text("Coba Lagi")
+                                }
+                                Button(onClick = onStartNotificationPairing) {
+                                    Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Pair Ulang")
+                                }
+                            }
+                        }
+                        else -> {}
                     }
                 }
             }

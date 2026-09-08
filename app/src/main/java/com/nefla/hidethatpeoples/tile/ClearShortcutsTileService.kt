@@ -1,12 +1,15 @@
 package com.nefla.hidethatpeoples.tile
 
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.widget.Toast
+import com.nefla.hidethatpeoples.MainActivity
 import com.nefla.hidethatpeoples.data.AppPreferences
-import com.nefla.hidethatpeoples.shizuku.ShizukuManager
+import com.nefla.hidethatpeoples.privilege.PrivilegeManager
+import com.nefla.hidethatpeoples.privilege.PrivilegeState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,6 +17,7 @@ import kotlinx.coroutines.withContext
 
 class ClearShortcutsTileService : TileService() {
     private val scope = CoroutineScope(Dispatchers.Main)
+    private val privilegeManager by lazy { PrivilegeManager.getInstance(applicationContext) }
 
     override fun onStartListening() {
         super.onStartListening()
@@ -22,7 +26,9 @@ class ClearShortcutsTileService : TileService() {
 
     private fun updateTileState(subtitle: String? = null) {
         val tile = qsTile ?: return
-        if (ShizukuManager.isReady()) {
+        val state = privilegeManager.activeState.value
+
+        if (state is PrivilegeState.Ready) {
             tile.state = Tile.STATE_INACTIVE
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 tile.subtitle = subtitle ?: "Tap to clear"
@@ -30,7 +36,11 @@ class ClearShortcutsTileService : TileService() {
         } else {
             tile.state = Tile.STATE_UNAVAILABLE
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                tile.subtitle = "Shizuku required"
+                tile.subtitle = when (state) {
+                    is PrivilegeState.PairingRequired -> "Pairing required"
+                    is PrivilegeState.Connecting -> "Connecting..."
+                    else -> "Setup required"
+                }
             }
         }
         tile.updateTile()
@@ -39,8 +49,14 @@ class ClearShortcutsTileService : TileService() {
     override fun onClick() {
         super.onClick()
 
-        if (!ShizukuManager.isReady()) {
-            Toast.makeText(this, "Shizuku is not running or permission denied!", Toast.LENGTH_SHORT).show()
+        if (!privilegeManager.isReady()) {
+            Toast.makeText(this, "Wireless ADB or Shizuku setup required!", Toast.LENGTH_SHORT).show()
+            try {
+                val appIntent = Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivityAndCollapse(appIntent)
+            } catch (_: Throwable) {}
             updateTileState()
             return
         }
@@ -59,7 +75,7 @@ class ClearShortcutsTileService : TileService() {
             val targets = prefs.enabledPackages
 
             val results = withContext(Dispatchers.IO) {
-                ShizukuManager.clearMultipleShortcuts(targets)
+                privilegeManager.clearMultipleShortcuts(targets)
             }
 
             prefs.lastClearedTimestamp = System.currentTimeMillis()

@@ -23,6 +23,7 @@ Daftar seluruh catatan task rekayasa, rencana arsitektur, spesifikasi teknis, da
 
 | No | File Dokumen | Kategori / Topik | Status | Target CalVer | Terakhir Diperbarui |
 |:---|:---|:---|:---:|:---:|:---|
+| 01 | [`01_Standalone_Built_In_Local_Wireless_Adb_Engine.md`](03_Security_And_Privileges/01_Standalone_Built_In_Local_Wireless_Adb_Engine.md) | Standalone Built In Local Wireless Adb Engine | `Completed` | `v2026.09.09` | `2026-09-09 01:25:00 WIB` |
 
 ---
 

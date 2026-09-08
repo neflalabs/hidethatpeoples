@@ -19,6 +19,7 @@
         <package android:name="org.thoughtcrime.securesms" />
         <package android:name="com.facebook.orca" />
         <package android:name="com.instagram.android" />
+        <package android:name="com.google.android.gm" />
     </queries>
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -54,6 +55,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="com.nefla.hidethatpeoples.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <service
             android:name="com.nefla.hidethatpeoples.tile.ClearShortcutsTileService"

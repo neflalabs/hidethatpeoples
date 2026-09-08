@@ -14,7 +14,8 @@ data class TargetApp(
             TargetApp("com.google.android.apps.messaging", "Google Messages"),
             TargetApp("org.thoughtcrime.securesms", "Signal"),
             TargetApp("com.facebook.orca", "Facebook Messenger"),
-            TargetApp("com.instagram.android", "Instagram")
+            TargetApp("com.instagram.android", "Instagram"),
+            TargetApp("com.google.android.gm", "Gmail")
         )
     }
 }

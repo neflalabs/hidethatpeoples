@@ -1,9 +1,24 @@
 -- Merging decision tree log ---
+provider#rikka.shizuku.ShizukuProvider
+INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:37:9-43:82
+	android:enabled
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:41:13-35
+	android:authorities
+		INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:39:13-59
+	android:multiprocess
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:40:13-41
+	android:exported
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:42:13-36
+	android:permission
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:43:13-79
+	android:name
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:38:13-57
 manifest
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-49:12
-INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-49:12
-INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-49:12
-INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-49:12
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-58:12
+INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-58:12
+INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-58:12
+INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:2:1-58:12
 MERGED from [androidx.activity:activity:1.10.1] /home/nefla/.gradle/caches/9.5.0/transforms/2fd90eeeb7b583272f68203b6170380c/transformed/activity-1.10.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.work:work-runtime-ktx:2.10.0] /home/nefla/.gradle/caches/9.5.0/transforms/ececae9d4ea15baba601c139dbdfea19/transformed/work-runtime-ktx-2.10.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.work:work-runtime:2.10.0] /home/nefla/.gradle/caches/9.5.0/transforms/33e808da129f92f498fca4caef9e01cb/transformed/work-runtime-2.10.0/AndroidManifest.xml:17:1-145:12
@@ -79,7 +94,7 @@ ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/Androi
 	android:name
 		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:4:22-74
 queries
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:6:5-15:15
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:6:5-16:15
 package#moe.shizuku.privileged.api
 ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:7:9-62
 	android:name
@@ -112,9 +127,13 @@ package#com.instagram.android
 ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:14:9-57
 	android:name
 		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:14:18-54
+package#com.google.android.gm
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:15:9-57
+	android:name
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:15:18-54
 application
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:17:5-47:19
-INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:17:5-47:19
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:18:5-56:19
+INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:18:5-56:19
 MERGED from [androidx.work:work-runtime:2.10.0] /home/nefla/.gradle/caches/9.5.0/transforms/33e808da129f92f498fca4caef9e01cb/transformed/work-runtime-2.10.0/AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.work:work-runtime:2.10.0] /home/nefla/.gradle/caches/9.5.0/transforms/33e808da129f92f498fca4caef9e01cb/transformed/work-runtime-2.10.0/AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] /home/nefla/.gradle/caches/9.5.0/transforms/5172fe2fe5a68fe54474b3464821fa3a/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
@@ -140,57 +159,57 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/nefla
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] /home/nefla/.gradle/caches/9.5.0/transforms/622d2690cc77e573dd46733e6f2982d0/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:23:9-35
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:24:9-35
 	android:label
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:21:9-41
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:22:9-41
 	tools:ignore
 		ADDED from [dev.rikka.shizuku:provider:13.1.5] /home/nefla/.gradle/caches/9.5.0/transforms/592dc51539e2bb95551f90a51eb54f78/transformed/provider-13.1.5/AndroidManifest.xml:10:18-69
 	android:roundIcon
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:22:9-48
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:23:9-48
 	android:icon
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:20:9-43
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:21:9-43
 	android:allowBackup
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:19:9-35
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:20:9-35
 	android:theme
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:24:9-66
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:25:9-66
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:18:9-43
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:19:9-43
 activity#com.nefla.hidethatpeoples.MainActivity
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:26:9-34:20
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:27:9-35:20
 	android:exported
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:28:13-36
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:29:13-36
 	android:theme
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:29:13-70
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:30:13-70
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:27:13-41
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:28:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:30:13-33:29
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:31:13-34:29
 action#android.intent.action.MAIN
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:31:17-69
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:32:17-69
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:31:25-66
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:32:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:32:17-77
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:33:17-77
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:32:27-74
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:33:27-74
 service#com.nefla.hidethatpeoples.tile.ClearShortcutsTileService
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:36:9-45:19
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:45:9-54:19
 	android:label
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:39:13-46
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:48:13-46
 	android:exported
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:41:13-36
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:50:13-36
 	android:permission
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:40:13-77
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:49:13-77
 	android:icon
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:38:13-54
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:47:13-54
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:37:13-59
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:46:13-59
 intent-filter#action:name:android.service.quicksettings.action.QS_TILE
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:42:13-44:29
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:51:13-53:29
 action#android.service.quicksettings.action.QS_TILE
-ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:43:17-87
+ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:52:17-87
 	android:name
-		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:43:25-84
+		ADDED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml:52:25-84
 uses-sdk
 INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/nefla/AndroidStudioProjects/hidethatpeoples/app/src/main/AndroidManifest.xml

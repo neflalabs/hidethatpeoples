@@ -17,7 +17,15 @@ class AppPreferences(context: Context) {
     var enabledPackages: Set<String>
         get() {
             val defaults = TargetApp.DEFAULT_TARGETS.filter { it.defaultEnabled }.map { it.packageName }.toSet()
-            return prefs.getStringSet(KEY_ENABLED_PACKAGES, defaults) ?: defaults
+            val saved = prefs.getStringSet(KEY_ENABLED_PACKAGES, null) ?: return defaults
+            val disabled = prefs.getStringSet("disabled_packages", emptySet()) ?: emptySet()
+            val result = saved.toMutableSet()
+            for (defaultApp in TargetApp.DEFAULT_TARGETS) {
+                if (defaultApp.defaultEnabled && !disabled.contains(defaultApp.packageName)) {
+                    result.add(defaultApp.packageName)
+                }
+            }
+            return result
         }
         set(value) {
             prefs.edit().putStringSet(KEY_ENABLED_PACKAGES, value).apply()
@@ -29,11 +37,15 @@ class AppPreferences(context: Context) {
 
     fun setPackageEnabled(packageName: String, enabled: Boolean) {
         val current = enabledPackages.toMutableSet()
+        val disabled = (prefs.getStringSet("disabled_packages", emptySet()) ?: emptySet()).toMutableSet()
         if (enabled) {
             current.add(packageName)
+            disabled.remove(packageName)
         } else {
             current.remove(packageName)
+            disabled.add(packageName)
         }
+        prefs.edit().putStringSet("disabled_packages", disabled).apply()
         enabledPackages = current
     }
 

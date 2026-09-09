@@ -32,11 +32,23 @@ android {
     signingConfigs {
         create("release") {
             val keystoreFile = rootProject.file("release.keystore")
+            val keystorePropsFile = rootProject.file("keystore.properties")
+            val props = java.util.Properties()
+            if (keystorePropsFile.exists()) {
+                keystorePropsFile.inputStream().use { props.load(it) }
+            }
+
             if (keystoreFile.exists()) {
                 storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
-                keyAlias = System.getenv("KEY_ALIAS") ?: "hidethatpeoples"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    ?: props.getProperty("KEYSTORE_PASSWORD")
+                    ?: "android"
+                keyAlias = System.getenv("KEY_ALIAS")
+                    ?: props.getProperty("KEY_ALIAS")
+                    ?: "hidethatpeoples"
+                keyPassword = System.getenv("KEY_PASSWORD")
+                    ?: props.getProperty("KEY_PASSWORD")
+                    ?: "android"
             } else {
                 // Fallback to debug signature so local release builds are always signed & installable
                 initWith(getByName("debug"))

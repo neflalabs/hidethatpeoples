@@ -39,6 +39,7 @@ Daftar seluruh catatan task rekayasa, rencana arsitektur, spesifikasi teknis, da
 | No | File Dokumen | Kategori / Topik | Status | Target CalVer | Terakhir Diperbarui |
 |:---|:---|:---|:---:|:---:|:---|
 | 01 | [`01_Shizuku_Provider_Manifest_And_Reflection_Fixes.md`](05_Audits_Maintenance_And_Bugfixes/01_Shizuku_Provider_Manifest_And_Reflection_Fixes.md) | Shizuku Provider Manifest And Reflection Fixes | `Completed` | `v2026.09.08` | `2026-09-08 19:48:00 WIB` |
+| 02 | [`02_Batch_Execution_Watchdog_And_Shizuku_Deprecation.md`](05_Audits_Maintenance_And_Bugfixes/02_Batch_Execution_Watchdog_And_Shizuku_Deprecation.md) | Batch Execution Watchdog And Shizuku Deprecation | `Completed` | `v2026.09.09` | `2026-09-09 11:15:00 WIB` |
 
 ---
 

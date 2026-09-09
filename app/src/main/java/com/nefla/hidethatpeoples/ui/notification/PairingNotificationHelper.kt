@@ -25,7 +25,7 @@ object PairingNotificationHelper {
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Wireless ADB Pairing"
-            val descriptionText = "Notifikasi untuk memasukkan kode pairing tanpa menutup Settings"
+            val descriptionText = "Notification to enter pairing code without closing Settings"
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
@@ -47,9 +47,9 @@ object PairingNotificationHelper {
         val remoteInput = RemoteInput.Builder(KEY_PAIRING_INPUT)
             .setLabel(
                 if (lastDiscoveredPort != null)
-                    "Ketik 6 digit code (Port $lastDiscoveredPort)"
+                    "Enter 6-digit code (Port $lastDiscoveredPort)"
                 else
-                    "Ketik 6 digit code (atau 'PORT KODE')"
+                    "Enter 6-digit code (or 'PORT CODE')"
             )
             .build()
 
@@ -65,7 +65,7 @@ object PairingNotificationHelper {
 
         val replyAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_input_add,
-            "Masukkan Kode Pairing",
+            "Enter Pairing Code",
             submitPendingIntent
         ).addRemoteInput(remoteInput).build()
 
@@ -87,15 +87,15 @@ object PairingNotificationHelper {
         )
 
         val portText = if (lastDiscoveredPort != null) {
-            "🟢 Port $lastDiscoveredPort terdeteksi! Tarik & ketik 6 digit kode."
+            "🟢 Port $lastDiscoveredPort detected! Pull down & enter 6-digit code."
         } else {
-            "Mencari port... Tarik & ketik format: [PORT] [KODE]"
+            "Searching for port... Pull down & enter: [PORT] [CODE]"
         }
 
         val bigText = if (lastDiscoveredPort != null) {
-            "🟢 Port $lastDiscoveredPort terdeteksi!\nKetik 6 digit kode pairing dari layar Settings.\n(Jika port di dialog HP Anda berbeda, ketik: [PORT] [KODE], contoh: $lastDiscoveredPort 123456)"
+            "🟢 Port $lastDiscoveredPort detected!\nEnter the 6-digit pairing code from Settings dialog.\n(If port differs, enter: [PORT] [CODE], e.g. $lastDiscoveredPort 123456)"
         } else {
-            "Mencari port via mDNS...\nBuka dialog 'Pair device with pairing code'.\nKetik format: [PORT] [KODE] (contoh: 39481 123456)"
+            "Discovering port via mDNS...\nOpen 'Pair device with pairing code' dialog.\nEnter format: [PORT] [CODE] (e.g. 39481 123456)"
         }
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
@@ -108,7 +108,7 @@ object PairingNotificationHelper {
             .setAutoCancel(false)
             .setContentIntent(contentIntent)
             .addAction(replyAction)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Batal", cancelPendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelPendingIntent)
             .build()
     }
 
@@ -128,8 +128,8 @@ object PairingNotificationHelper {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle("Pairing Berhasil! 🟢")
-            .setContentText("Wireless ADB terhubung ($detail). Siap membersihkan Direct Share.")
+            .setContentTitle("Pairing Successful! 🟢")
+            .setContentText("Wireless ADB connected ($detail). Ready to clear Direct Share contacts.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setTimeoutAfter(6000L)
@@ -142,10 +142,10 @@ object PairingNotificationHelper {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_error)
-            .setContentTitle("Pairing Gagal ❌")
+            .setContentTitle("Pairing Failed ❌")
             .setContentText(error)
             .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$error\n\nPastikan dialog 'Pair device with pairing code' sedang terbuka di layar, periksa apakah port dan kode sesuai, lalu coba lagi."
+                "$error\n\nEnsure 'Pair device with pairing code' dialog is currently active, verify the port and code, and try again."
             ))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

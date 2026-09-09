@@ -115,15 +115,15 @@ fun PairingBottomSheet(
                 ) {
                     StepItem(
                         number = "1",
-                        text = "Hubungkan ponsel ke jaringan Wi-Fi atau aktifkan Hotspot pribadi."
+                        text = "Connect your phone to Wi-Fi or turn on Personal Hotspot."
                     )
                     StepItem(
                         number = "2",
-                        text = "Buka Developer Options -> Wireless Debugging -> ketuk 'Pair device with pairing code'."
+                        text = "Go to Developer Options -> Wireless Debugging -> tap 'Pair device with pairing code'."
                     )
                     StepItem(
                         number = "3",
-                        text = "Masukkan 6 angka pairing code ke dalam kotak di bawah."
+                        text = "Enter the 6-digit pairing code in the box below."
                     )
                 }
             }
@@ -136,7 +136,7 @@ fun PairingBottomSheet(
             ) {
                 Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Buka Wireless Debugging Settings")
+                Text("Open Wireless Debugging Settings")
             }
 
             // Port Status Banner
@@ -155,14 +155,14 @@ fun PairingBottomSheet(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Port Terdeteksi: $detectedPort",
+                            text = "Detected Port: $detectedPort",
                             style = MaterialTheme.typography.bodySmall,
                             color = GreenOnline,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                     TextButton(onClick = { isManualPortEnabled = true }) {
-                        Text("Ubah Port", fontSize = 12.sp)
+                        Text("Change Port", fontSize = 12.sp)
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -174,14 +174,14 @@ fun PairingBottomSheet(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isManualPortEnabled) "Input Port Manual" else "Mencari port via mDNS...",
+                            text = if (isManualPortEnabled) "Manual Port Mode" else "Discovering port via mDNS...",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (!isManualPortEnabled) {
                         TextButton(onClick = { isManualPortEnabled = true }) {
-                            Text("Input Manual", fontSize = 12.sp)
+                            Text("Manual Input", fontSize = 12.sp)
                         }
                     }
                 }
@@ -192,8 +192,8 @@ fun PairingBottomSheet(
                 OutlinedTextField(
                     value = customPortText,
                     onValueChange = { customPortText = it.filter { ch -> ch.isDigit() }.take(5) },
-                    label = { Text("Port Pairing (5 digit)") },
-                    placeholder = { Text("Contoh: 39481") },
+                    label = { Text("Pairing Port (5 digits)") },
+                    placeholder = { Text("e.g. 39481") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -207,7 +207,7 @@ fun PairingBottomSheet(
                 onValueChange = {
                     if (it.length <= 6) pairingCode = it.filter { ch -> ch.isDigit() }
                 },
-                label = { Text("Pairing Code (6 Digit)") },
+                label = { Text("Pairing Code (6 Digits)") },
                 placeholder = { Text("000000") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -270,11 +270,11 @@ fun PairingBottomSheet(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Memproses Pairing...")
+                    Text("Pairing in Progress...")
                 } else {
                     Icon(Icons.Default.Link, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pair & Hubungkan", fontWeight = FontWeight.Bold)
+                    Text("Pair & Connect", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -290,7 +290,7 @@ private suspend fun executePair(
     onSuccess: () -> Unit
 ) {
     if (port == null || port <= 0) {
-        setError("Port belum terdeteksi. Silakan buka dialog 'Pair device with pairing code' atau isi port manual.")
+        setError("Port not detected yet. Please open the 'Pair device with pairing code' dialog or enter port manually.")
         return
     }
 
@@ -302,7 +302,7 @@ private suspend fun executePair(
     if (result.isSuccess) {
         onSuccess()
     } else {
-        setError(result.exceptionOrNull()?.message ?: "Gagal melakukan pairing. Periksa kembali kodenya.")
+        setError(result.exceptionOrNull()?.message ?: "Pairing failed. Please double-check your code.")
     }
 }
 

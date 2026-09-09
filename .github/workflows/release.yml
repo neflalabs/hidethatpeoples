@@ -1,0 +1,74 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      - name: Decode Release Keystore (Optional Secret)
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Prepare Release Artifacts
+        id: prepare_artifacts
+        run: |
+          mkdir -p release_artifacts
+          APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          TAG_NAME="${{ github.ref_name }}"
+          if [ -z "$TAG_NAME" ] || [[ "$TAG_NAME" == "main" ]]; then
+            TAG_NAME="v1.0.${{ github.run_number }}"
+          fi
+          TARGET_APK="release_artifacts/HideThatPeoples-${TAG_NAME}.apk"
+          cp "$APK_PATH" "$TARGET_APK"
+          cd release_artifacts
+          sha256sum "HideThatPeoples-${TAG_NAME}.apk" > "HideThatPeoples-${TAG_NAME}.apk.sha256"
+          echo "release_tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "apk_file=$TARGET_APK" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare_artifacts.outputs.release_tag }}
+          name: "HideThatPeoples ${{ steps.prepare_artifacts.outputs.release_tag }}"
+          files: |
+            release_artifacts/*.apk
+            release_artifacts/*.sha256
+          draft: false
+          prerelease: false
+          generate_release_notes: true

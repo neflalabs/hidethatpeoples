@@ -188,6 +188,51 @@ sealed interface PrivilegeState {
   - `app/src/main/AndroidManifest.xml`
 - **Verifikasi**: APK terpasang di perangkat (`adb install`), notifikasi muncul saat pairing dimulai, input kode via `RemoteInput` berhasil diproses.
 
+### Slice 7: Device Runtime Hardening & End-to-End Live Verification (Size: M)
+- **Tugas**: Menyelesaikan kendala runtime pada Android 15/16:
+  1. *eBPF Background Socket Block (`ECONNREFUSED`)*: Migrasi notification sender ke `PairingForegroundService` bertipe `connectedDevice` agar proses memiliki izin socket jaringan penuh.
+  2. *SPAKE2+ Key Exchange (`Conscrypt.exportKeyingMaterial`)*: Integrasikan `org.conscrypt:conscrypt-android:2.5.2` dan inisialisasi provider di `HideThatPeoplesApp`.
+  3. *mDNS Flow Collection Hang*: Ganti blocking `flow.collect` dengan `.first()` dan simpan port aktif terakhir untuk auto-reconnect instan (< 100 ms).
+  4. *AdbStream EOF Stream Closed Handling*: Tangani `IOException("Stream closed.")` saat remote `adbd` menutup channel setelah eksekusi `cmd shortcut clear-shortcuts --user 0 <pkg>`.
+- **Target File**:
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/notification/PairingForegroundService.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/HideThatPeoplesApp.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/privilege/adb/LocalAdbPrivilegeProvider.kt`
+- **Verifikasi**: Uji langsung pada perangkat fisik Xiaomi M2007J20CG (Android 16). Pairing terkonfirmasi di Settings, status aplikasi berubah menjadi `Built-in Wireless ADB Terhubung`, dan eksekusi pembersihan shortcut WhatsApp & Telegram sukses 100%.
+
+### Slice 8: Compact UI Revamp & Dynamic Target Discovery (Size: M)
+- **Tugas**:
+  1. *Compact & Self-Explanatory UI*: Rombak tampilan antarmuka menjadi ringkas, minim ruang kosong, dengan Hero Dashboard Card terpadu (status ADB + tombol pembersih + info terakhir dibersihkan), serta side-by-side controls untuk Auto-Clean & Quick Settings Tile.
+  2. *Dynamic Shared Person Discovery*: Menggantikan target statis dengan `TargetAppManager` yang memindai semua aplikasi terpasang di perangkat (`ACTION_SEND`, `CATEGORY_SOCIAL`, serta aplikasi chat/sosial populer).
+  3. *Native High-Res App Icons*: Menampilkan ikon aplikasi asli dan label riil dari `PackageManager`.
+  4. *Quick Filtering & Batch Selection*: Menambahkan search bar pencarian instan, filter chips (*Chat & Sosmed Saja*, *Semua*, *Hanya Terpilih*), serta tombol aksi cepat *Pilih Semua* & *Batal*.
+- **Target File**:
+  - `app/src/main/AndroidManifest.xml`
+  - `app/src/main/java/com/nefla/hidethatpeoples/data/TargetAppManager.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/data/AppPreferences.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/HomeScreen.kt`
+- **Verifikasi**: Build lolos 100%, terpasang di Xiaomi M2007J20CG (Android 16), memindai aplikasi chat (WhatsApp, Instagram, Threads, Discord, Gmail, Grok, Messages, dll.), dan eksekusi batch cleaning berjalan sukses.
+
+### Slice 9: Full English Localization & Redesigned About Popup (Size: S)
+- **Tugas**:
+  1. *Full English Localization*: Melokalisasi seluruh string antarmuka ke bahasa Inggris (HomeScreen, PairingBottomSheet, PairingNotificationHelper, PairingForegroundService toasts, LocalAdbPrivilegeProvider error messages, dan TargetAppManager categories).
+  2. *Reorganized & Modernized About Dialog*: Menata ulang popup informasi aplikasi dengan estetika Material 3 dark surface:
+     - Header aplikasi dengan badge ikon & versi `HideThatPeoples v1.0.0 • On-Device Privacy Utility`.
+     - Deskripsi fungsi aplikasi yang ringkas dan jelas.
+     - Card `Created by` -> **`neflalabs`** (ikon Terminal).
+     - Card `Instagram` -> **`@neflalabs`** (interaktif, membuka profil `https://instagram.com/neflalabs`).
+     - Card `License` -> **`MIT License (Open Source)`** (ikon Code).
+     - Privacy guarantee pill: `100% On-Device • Non-Root • Banking Safe`.
+     - Tombol `Close` yang elegan.
+- **Target File**:
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/HomeScreen.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/components/PairingBottomSheet.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/notification/PairingNotificationHelper.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/ui/notification/PairingForegroundService.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/privilege/adb/LocalAdbPrivilegeProvider.kt`
+  - `app/src/main/java/com/nefla/hidethatpeoples/data/TargetAppManager.kt`
+- **Verifikasi**: Build dan instalasi sukses, UI terverifikasi 100% dalam bahasa Inggris tanpa text clipping, popup About berfungsi responsif dan tautan Instagram dapat dibuka.
+
 ---
 
 ## 📋 6. Checkpoints & Matriks Verifikasi
@@ -197,6 +242,9 @@ sealed interface PrivilegeState {
 - [x] **Checkpoint 2 (mDNS & ADB Wire Engine)**: Auto-discovery port dan client TLS socket siap mengeksekusi shell command.
 - [x] **Checkpoint 3 (UI, Pairing Wizard & Tile)**: Pengguna dapat melakukan pairing langsung dari UI aplikasi dan membersihkan shortcut.
 - [x] **Checkpoint 4 (Notification Pairing UX)**: Pengguna dapat memasukkan 6 digit PIN langsung lewat notifikasi shade tanpa dialog Settings ter-cancel.
+- [x] **Checkpoint 5 (Live On-Device Pairing & Connect)**: Teruji di Android 16 fisik, pairing terdaftar di Wireless Debugging settings, auto-connect aktif, dan pembersihan shortcut berjalan sukses.
+- [x] **Checkpoint 6 (Compact UI & Full Target Discovery)**: UI lebih compact & self-explanatory, seluruh aplikasi chat/share target terdeteksi otomatis dengan ikon asli.
+- [x] **Checkpoint 7 (Full English & Redesigned About Popup)**: Seluruh teks dalam bahasa Inggris standar dan dialog About terstruktur rapi dengan lisensi MIT serta kontak creator @neflalabs.
 
 ### Matriks Hasil Pengujian:
 | No | Komponen / Pengujian | Kriteria Keberhasilan | Status |
@@ -204,9 +252,15 @@ sealed interface PrivilegeState {
 | 1 | Kompilasi Kotlin & Android Gradle | `./gradlew assembleDebug` 0 Error | **Passed** |
 | 2 | Kunci RSA & Cert X.509 | Berhasil digenerate & dipersist di `noBackupFilesDir` | **Passed** |
 | 3 | Auto-detect Port mDNS | Resolusi port pairing & connect tanpa input manual | **Passed** |
-| 4 | Eksekusi `cmd shortcut` | Direct Share target terhapus bersih dari ShareSheet | **Passed** |
-| 5 | Quick Settings Tile | 1-ketukan membersihkan shortcut saat provider READY | **Passed** |
-| 6 | Notification Direct Reply | Input PIN via notification shade tanpa cancel Settings | **Passed** |
+| 4 | Notification Direct Reply | Input PIN via notification shade tanpa cancel Settings | **Passed** |
+| 5 | SPAKE2+ TLS Pairing di Device | Handshake sukses, device tercatat di Paired Devices OS | **Passed** |
+| 6 | Auto-Connect Local ADB | Terkoneksi otomatis ke `127.0.0.1:<connect_port>` | **Passed** |
+| 7 | Eksekusi `cmd shortcut clear-shortcuts` | Direct Share target (WhatsApp, Telegram, dll) terhapus bersih | **Passed** |
+| 8 | Quick Settings Tile | 1-ketukan membersihkan shortcut saat provider READY | **Passed** |
+| 9 | Dynamic Target Discovery & App Icons | Memindai semua aplikasi chat & share target terinstall | **Passed** |
+| 10 | Compact Revamped UI Layout | Layout padat, self-explanatory, search & batch toggle responsif | **Passed** |
+| 11 | Full English Localization | Seluruh teks UI, notifikasi, dialog, dan status dalam bahasa Inggris | **Passed** |
+| 12 | Redesigned About Popup | Struktur rapi (Created by neflalabs, Instagram @neflalabs, MIT License) | **Passed** |
 
 ---
 
@@ -217,3 +271,6 @@ sealed interface PrivilegeState {
 | `2026-09-09 01:15:00 WIB` | `v2026.09.09` | AI / Lead Architect | Elaborasi arsitektur teknis lengkap, ADR-Lite, dan rencana vertical slices |
 | `2026-09-09 01:25:00 WIB` | `v2026.09.09` | AI / Lead Architect | Implementasi seluruh Slice 1-5 tuntas, build APK lolos 100% tanpa error |
 | `2026-09-09 01:38:00 WIB` | `v2026.09.09` | AI / Lead Architect | Implementasi Slice 6 (Notification Direct Reply Pairing UX), build & deploy ke device sukses |
+| `2026-09-09 02:19:00 WIB` | `v2026.09.09` | AI / Lead Architect | Implementasi Slice 7 (ForegroundService connectedDevice, Conscrypt provider, connect flow fix, stream EOF handling), uji on-device sukses total |
+| `2026-09-09 02:32:00 WIB` | `v2026.09.09` | AI / Lead Architect | Implementasi Slice 8 (Compact UI Revamp, Dynamic Target Discovery, Real App Icons, Search & Filter Chips), uji on-device sukses |
+| `2026-09-09 02:40:00 WIB` | `v2026.09.09` | AI / Lead Architect | Implementasi Slice 9 (Full English Localization & Redesigned About Popup), uji on-device sukses |

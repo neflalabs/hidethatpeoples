@@ -72,9 +72,10 @@ class AdbMdnsDiscovery(private val context: Context) {
                     resolveMutex.withLock {
                         resolveServiceSafely(serviceInfo) { resolvedInfo ->
                             val host = resolvedInfo.host ?: return@resolveServiceSafely
-                            val hostAddress = host.hostAddress ?: ""
+                            val rawAddress = host.hostAddress ?: ""
+                            val hostAddress = rawAddress.split("%")[0]
                             val port = resolvedInfo.port
-                            val isLocal = localIps.contains(hostAddress) || hostAddress.startsWith("127.") || hostAddress.startsWith("fe80") || serviceType == SERVICE_TYPE_PAIRING
+                            val isLocal = localIps.contains(hostAddress) || hostAddress.startsWith("127.") || hostAddress.startsWith("fe80") || hostAddress == "::1" || serviceType == SERVICE_TYPE_PAIRING || !filterLocalDeviceOnly
 
                             if (!filterLocalDeviceOnly || isLocal) {
                                 val discovered = DiscoveredAdbService(
@@ -136,6 +137,7 @@ class AdbMdnsDiscovery(private val context: Context) {
     ) {
         val deferred = CompletableDeferred<NsdServiceInfo?>()
 
+        var callbackToUnregister: Any? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val callback = object : NsdManager.ServiceInfoCallback {
                 override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
@@ -155,6 +157,7 @@ class AdbMdnsDiscovery(private val context: Context) {
 
                 override fun onServiceInfoCallbackUnregistered() {}
             }
+            callbackToUnregister = callback
             nsdManager.registerServiceInfoCallback(serviceInfo, { it.run() }, callback)
         } else {
             nsdManager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
@@ -169,7 +172,17 @@ class AdbMdnsDiscovery(private val context: Context) {
             })
         }
 
-        val result = deferred.await()
+        val result = try {
+            kotlinx.coroutines.withTimeoutOrNull(3500L) {
+                deferred.await()
+            }
+        } finally {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && callbackToUnregister is NsdManager.ServiceInfoCallback) {
+                try {
+                    nsdManager.unregisterServiceInfoCallback(callbackToUnregister)
+                } catch (_: Exception) {}
+            }
+        }
         if (result != null) {
             onResolved(result)
         }

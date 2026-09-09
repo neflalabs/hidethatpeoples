@@ -74,7 +74,7 @@ class PairingForegroundService : Service() {
                 val inputText = remoteInput?.getCharSequence(PairingNotificationHelper.KEY_PAIRING_INPUT)?.toString()?.trim()
 
                 if (inputText.isNullOrBlank()) {
-                    Toast.makeText(this, "Kode pairing tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Pairing code cannot be empty", Toast.LENGTH_SHORT).show()
                     return START_NOT_STICKY
                 }
 
@@ -92,7 +92,7 @@ class PairingForegroundService : Service() {
                 }
 
                 if (port == null || port <= 0) {
-                    val msg = "Port belum terdeteksi. Silakan ketik: [PORT] [KODE] (contoh: 39481 123456)"
+                    val msg = "Port not detected yet. Please enter: [PORT] [CODE] (e.g. 39481 123456)"
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                     val notif = PairingNotificationHelper.buildNotification(this, null)
                     PairingNotificationHelper.notify(this, notif)
@@ -100,21 +100,21 @@ class PairingForegroundService : Service() {
                 }
 
                 if (code.length != 6 || !code.all { it.isDigit() }) {
-                    val msg = "Kode pairing harus 6 digit angka (didapat: '$code')"
+                    val msg = "Pairing code must be 6 numeric digits (got: '$code')"
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                     val notif = PairingNotificationHelper.buildNotification(this, port)
                     PairingNotificationHelper.notify(this, notif)
                     return START_NOT_STICKY
                 }
 
-                Toast.makeText(this, "Memproses pairing ke port $port...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Processing pairing to port $port...", Toast.LENGTH_SHORT).show()
 
                 serviceScope.launch {
                     val privilegeManager = PrivilegeManager.getInstance(applicationContext)
                     val result = privilegeManager.pairLocalAdb(code, port)
                     withContext(Dispatchers.Main) {
                         if (result.isSuccess) {
-                            Toast.makeText(applicationContext, "Pairing Berhasil! Wireless ADB Terhubung 🟢", Toast.LENGTH_LONG).show()
+                            Toast.makeText(applicationContext, "Pairing Successful! Wireless ADB Connected 🟢", Toast.LENGTH_LONG).show()
                             PairingNotificationHelper.showSuccessNotification(applicationContext, "Port $port")
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                 stopForeground(STOP_FOREGROUND_DETACH)
@@ -124,8 +124,8 @@ class PairingForegroundService : Service() {
                             }
                             stopSelf()
                         } else {
-                            val err = result.exceptionOrNull()?.localizedMessage ?: "Pairing ditolak oleh sistem"
-                            Toast.makeText(applicationContext, "Pairing Gagal: $err", Toast.LENGTH_LONG).show()
+                            val err = result.exceptionOrNull()?.localizedMessage ?: "Pairing rejected by system"
+                            Toast.makeText(applicationContext, "Pairing Failed: $err", Toast.LENGTH_LONG).show()
                             PairingNotificationHelper.showErrorNotification(applicationContext, err)
                         }
                     }

@@ -1,0 +1,58 @@
+name: 🐛 Bug Report
+description: Report an issue or unexpected behavior in HideThatPeoples
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please provide as much relevant detail as possible.
+  - type: input
+    id: device_info
+    attributes:
+      label: Device & OS Version
+      description: e.g., POCO X3 NFC / Xiaomi Pad 6, Android 14 / HyperOS, ROM type
+      placeholder: Device model and Android version
+    validations:
+      required: true
+  - type: dropdown
+    id: privilege_mode
+    attributes:
+      label: Privilege Provider Mode
+      description: Which privilege provider was active when the issue occurred?
+      options:
+        - Built-in Wireless ADB
+        - Root (su)
+        - Not sure / Unable to connect
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce the issue?
+      value: |
+        1. Open '...'
+        2. Tap on '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logcat / Logs (Optional)
+      description: Relevant logcat lines if available (`adb logcat -s LocalAdbProvider:D AutoCleanWorker:D RootProvider:D`)
+      render: shell

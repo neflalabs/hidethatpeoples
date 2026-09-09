@@ -12,13 +12,16 @@ import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
 import java.security.PrivateKey
 import java.security.cert.Certificate
@@ -133,39 +136,102 @@ class LocalAdbPrivilegeProvider(
     fun stopPairingPortDiscovery() {
         pairingJob?.cancel()
         pairingJob = null
-        com.nefla.hidethatpeoples.ui.notification.PairingNotificationHelper.cancelNotification(context)
     }
 
-    fun startConnectPortDiscoveryAndConnect() {
+    fun cancelConnecting() {
+        connectJob?.cancel()
+        connectJob = null
+        _state.value = PrivilegeState.Disconnected
+    }
+
+    fun disconnectAdb() {
+        connectJob?.cancel()
+        connectJob = null
+        scope.launch {
+            try {
+                if (isConnected()) {
+                    disconnect()
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Error disconnecting ADB", e)
+            }
+            _state.value = PrivilegeState.Disconnected
+        }
+    }
+
+    fun startConnectPortDiscoveryAndConnect(targetPort: Int? = null) {
         connectJob?.cancel()
         connectJob = scope.launch {
             _state.value = PrivilegeState.Connecting
-            val discovered = withTimeoutOrNull(8000L) {
-                var foundPort: Int? = null
-                mdnsDiscovery.discoverServices(AdbMdnsDiscovery.SERVICE_TYPE_CONNECT)
-                    .collect { service ->
-                        val hostAddr = service.host.hostAddress ?: DEFAULT_HOST
-                        Log.d(TAG, "Discovered active connect port: $hostAddr:${service.port}")
-                        foundPort = service.port
-                        discoveredConnectPort = service.port
-                        discoveredConnectHost = hostAddr
-                        prefs.lastAdbConnectPort = service.port
-                        return@collect
-                    }
-                foundPort
-            }
+            Log.d(TAG, "Starting connect port discovery and connection...")
 
-            if (discovered != null) {
-                val success = tryConnect(discovered)
+            // 0. If user provided an explicit target port, attempt direct connection
+            if (targetPort != null && targetPort > 0) {
+                prefs.lastAdbConnectPort = targetPort
+                val hostAddr = discoveredConnectHost ?: DEFAULT_HOST
+                val success = tryConnect(targetPort, hostAddr)
                 if (success) {
+                    Log.i(TAG, "Connected successfully to manual port $targetPort")
                     _state.value = PrivilegeState.Ready(
                         type = PrivilegeType.LOCAL_ADB,
-                        details = "${discoveredConnectHost ?: DEFAULT_HOST}:$discovered"
+                        details = "$hostAddr:$targetPort"
+                    )
+                    return@launch
+                } else {
+                    val errMsg = "Gagal terhubung ke port $targetPort. Pastikan Wireless Debugging aktif di Developer Options."
+                    Log.e(TAG, errMsg)
+                    _state.value = PrivilegeState.Error(errMsg)
+                    return@launch
+                }
+            }
+
+            // 1. Try fast connect to last known port if available
+            val lastPort = prefs.lastAdbConnectPort
+            if (lastPort > 0) {
+                Log.d(TAG, "Trying fast connect to last known port: $lastPort")
+                if (tryConnect(lastPort)) {
+                    Log.i(TAG, "Fast connect succeeded to port $lastPort")
+                    _state.value = PrivilegeState.Ready(
+                        type = PrivilegeType.LOCAL_ADB,
+                        details = "${discoveredConnectHost ?: DEFAULT_HOST}:$lastPort"
+                    )
+                    return@launch
+                }
+            }
+
+            // 2. Discover active connect port via mDNS
+            val service = withTimeoutOrNull(8000L) {
+                try {
+                    mdnsDiscovery.discoverServices(AdbMdnsDiscovery.SERVICE_TYPE_CONNECT).first()
+                } catch (e: Throwable) {
+                    Log.w(TAG, "mDNS connect discovery error: ${e.message}")
+                    null
+                }
+            }
+
+            if (service != null) {
+                val rawHost = service.host.hostAddress ?: DEFAULT_HOST
+                val hostAddr = rawHost.split("%")[0]
+                val port = service.port
+                Log.i(TAG, "Discovered active connect port: $hostAddr:$port")
+                discoveredConnectPort = port
+                discoveredConnectHost = hostAddr
+                prefs.lastAdbConnectPort = port
+
+                val success = tryConnect(port, hostAddr)
+                if (success) {
+                    Log.i(TAG, "Connected successfully to ADB at $hostAddr:$port")
+                    _state.value = PrivilegeState.Ready(
+                        type = PrivilegeType.LOCAL_ADB,
+                        details = "$hostAddr:$port"
                     )
                 } else {
-                    _state.value = PrivilegeState.Error("Failed to connect to ADB port $discovered")
+                    val errMsg = "Gagal terhubung ke port $hostAddr:$port"
+                    Log.e(TAG, errMsg)
+                    _state.value = PrivilegeState.Error(errMsg)
                 }
             } else {
+                Log.w(TAG, "Connect port not discovered via mDNS within timeout")
                 if (!prefs.isAdbPaired) {
                     _state.value = PrivilegeState.PairingRequired(discoveredPairingPort)
                 } else {
@@ -220,7 +286,7 @@ class LocalAdbPrivilegeProvider(
             startConnectPortDiscoveryAndConnect()
             Result.success(Unit)
         } else {
-            val errMsg = lastError?.localizedMessage ?: "Pairing ditolak oleh sistem. Periksa port dan kode pairing."
+            val errMsg = lastError?.localizedMessage ?: "Pairing rejected by device. Please verify the port and pairing code."
             Log.e(TAG, "All pairing attempts failed: $errMsg")
             _state.value = PrivilegeState.Error("Pairing error: $errMsg")
             Result.failure(lastError ?: RuntimeException(errMsg))
@@ -262,13 +328,26 @@ class LocalAdbPrivilegeProvider(
         try {
             val command = "shell:cmd shortcut clear-shortcuts --user 0 $packageName"
             val stream = openStream(command)
+            val watchdog = scope.launch {
+                delay(6000L)
+                try { stream.close() } catch (_: Throwable) {}
+            }
             val reader = BufferedReader(InputStreamReader(stream.openInputStream()))
             val output = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                output.append(line).append("\n")
+            try {
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    output.append(line).append("\n")
+                }
+            } catch (e: IOException) {
+                // AdbStream throws "Stream closed." upon remote EOF
+                if (e.message?.contains("Stream closed") != true) {
+                    throw e
+                }
+            } finally {
+                watchdog.cancel()
+                try { stream.close() } catch (_: Throwable) {}
             }
-            stream.close()
 
             val resultStr = output.toString().trim()
             Log.d(TAG, "Cleared shortcuts for $packageName via Local ADB: $resultStr")
@@ -284,14 +363,64 @@ class LocalAdbPrivilegeProvider(
 
     override suspend fun clearMultipleShortcuts(packages: Collection<String>): Map<String, Boolean> = withContext(Dispatchers.IO) {
         val results = mutableMapOf<String, Boolean>()
+        if (packages.isEmpty()) return@withContext results
         if (!ensureConnected()) {
             packages.forEach { results[it] = false }
             return@withContext results
         }
 
-        for (pkg in packages) {
-            val res = clearShortcuts(pkg)
-            results[pkg] = res.isSuccess
+        // Batch execution in chunks (up to 25 packages) to run in a single ADB stream.
+        // This avoids dozens of separate TLS handshakes that easily block or lag.
+        val chunks = packages.chunked(25)
+        for (chunk in chunks) {
+            try {
+                val pkgListStr = chunk.joinToString(" ")
+                val command = "shell:for p in $pkgListStr; do res=\$(cmd shortcut clear-shortcuts --user 0 \"\$p\" 2>&1); echo \"\$p:\$res\"; done"
+                val stream = openStream(command)
+                val watchdog = scope.launch {
+                    delay(10000L)
+                    try { stream.close() } catch (_: Throwable) {}
+                }
+
+                try {
+                    val reader = BufferedReader(InputStreamReader(stream.openInputStream()))
+                    var line: String?
+                    var receivedCount = 0
+                    while (reader.readLine().also { line = it } != null) {
+                        val currentLine = line?.trim() ?: continue
+                        if (currentLine.contains(":")) {
+                            val parts = currentLine.split(":", limit = 2)
+                            val pkg = parts[0].trim()
+                            val res = parts[1].trim()
+                            results[pkg] = res.contains("Success", ignoreCase = true)
+                            Log.d(TAG, "Batch cleared shortcut for $pkg: $res")
+                            receivedCount++
+                        }
+                        if (receivedCount >= chunk.size) {
+                            break
+                        }
+                    }
+                } catch (e: IOException) {
+                    if (e.message?.contains("Stream closed") != true) {
+                        Log.w(TAG, "Stream read error during batch clear: ${e.message}")
+                    }
+                } finally {
+                    watchdog.cancel()
+                    try { stream.close() } catch (_: Throwable) {}
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error during batch shortcut clear chunk", e)
+                if (!isConnected()) {
+                    _state.value = PrivilegeState.Disconnected
+                }
+            }
+        }
+
+        // Fill any unrecorded packages with false
+        packages.forEach { pkg ->
+            if (!results.containsKey(pkg)) {
+                results[pkg] = false
+            }
         }
         return@withContext results
     }

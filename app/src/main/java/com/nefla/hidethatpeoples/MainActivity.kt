@@ -23,16 +23,10 @@ class MainActivity : ComponentActivity() {
                 HomeScreen(
                     privilegeManager = privilegeManager,
                     onRefreshState = {
-                        privilegeManager.localAdbProvider.startConnectPortDiscoveryAndConnect()
-                        privilegeManager.shizukuProvider.updateState()
+                        privilegeManager.reconnect()
                     }
                 )
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        privilegeManager.shizukuProvider.updateState()
     }
 }

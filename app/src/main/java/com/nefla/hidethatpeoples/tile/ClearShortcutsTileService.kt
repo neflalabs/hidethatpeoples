@@ -18,10 +18,23 @@ import kotlinx.coroutines.withContext
 class ClearShortcutsTileService : TileService() {
     private val scope = CoroutineScope(Dispatchers.Main)
     private val privilegeManager by lazy { PrivilegeManager.getInstance(applicationContext) }
+    private var stateObserverJob: kotlinx.coroutines.Job? = null
 
     override fun onStartListening() {
         super.onStartListening()
         updateTileState()
+        stateObserverJob?.cancel()
+        stateObserverJob = scope.launch {
+            privilegeManager.activeState.collect {
+                updateTileState()
+            }
+        }
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        stateObserverJob?.cancel()
+        stateObserverJob = null
     }
 
     private fun updateTileState(subtitle: String? = null) {
@@ -48,32 +61,60 @@ class ClearShortcutsTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-
-        if (!privilegeManager.isReady()) {
-            Toast.makeText(this, "Wireless ADB or Shizuku setup required!", Toast.LENGTH_SHORT).show()
-            try {
-                val appIntent = Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivityAndCollapse(appIntent)
-            } catch (_: Throwable) {}
-            updateTileState()
-            return
-        }
-
-        val tile = qsTile
-        if (tile != null) {
-            tile.state = Tile.STATE_ACTIVE
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                tile.subtitle = "Clearing..."
-            }
-            tile.updateTile()
-        }
+        val prefs = AppPreferences(applicationContext)
 
         scope.launch {
-            val prefs = AppPreferences(applicationContext)
-            val targets = prefs.enabledPackages
+            val tile = qsTile
+            var isReady = privilegeManager.isReady()
 
+            // If not immediately ready, check if device was previously paired
+            if (!isReady && prefs.isAdbPaired) {
+                if (tile != null) {
+                    tile.state = Tile.STATE_ACTIVE
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        tile.subtitle = "Connecting..."
+                    }
+                    tile.updateTile()
+                }
+
+                privilegeManager.reconnect()
+                val timeoutMs = 4000L
+                val startTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - startTime < timeoutMs) {
+                    if (privilegeManager.isReady()) {
+                        isReady = true
+                        break
+                    }
+                    kotlinx.coroutines.delay(200)
+                }
+            }
+
+            if (!isReady) {
+                val msg = if (prefs.isAdbPaired) {
+                    "Wireless ADB connection timed out. Open app to reconnect."
+                } else {
+                    "Wireless ADB setup required!"
+                }
+                Toast.makeText(this@ClearShortcutsTileService, msg, Toast.LENGTH_SHORT).show()
+                try {
+                    val appIntent = Intent(this@ClearShortcutsTileService, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivityAndCollapse(appIntent)
+                } catch (_: Throwable) {}
+                updateTileState()
+                return@launch
+            }
+
+            if (tile != null) {
+                tile.state = Tile.STATE_ACTIVE
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    tile.subtitle = "Clearing..."
+                }
+                tile.updateTile()
+            }
+
+            val targets = prefs.enabledPackages
             val results = withContext(Dispatchers.IO) {
                 privilegeManager.clearMultipleShortcuts(targets)
             }

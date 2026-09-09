@@ -6,12 +6,19 @@ plugins {
 }
 
 val gitCommitCount = providers.exec {
+    isIgnoreExitValue = true
     commandLine("git", "rev-list", "--count", "HEAD")
 }.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }
 
-val autoVersionCode: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
-    ?: gitCommitCount.getOrElse(1)
-val autoVersionName: String = "1.0.$autoVersionCode"
+val gitTag = providers.exec {
+    isIgnoreExitValue = true
+    commandLine("git", "describe", "--tags", "--exact-match")
+}.standardOutput.asText.map { it.trim().removePrefix("v") }
+
+val autoVersionCode: Int = gitCommitCount.getOrElse(1)
+val autoVersionName: String = System.getenv("APP_VERSION_NAME")?.trim()?.removePrefix("v")
+    ?: gitTag.orNull?.takeIf { it.isNotBlank() }
+    ?: "1.0.$autoVersionCode"
 
 base {
     archivesName.set("HideThatPeoples")

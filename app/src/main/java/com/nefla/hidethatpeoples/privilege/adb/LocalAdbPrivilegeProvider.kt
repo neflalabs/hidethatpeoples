@@ -200,7 +200,7 @@ class LocalAdbPrivilegeProvider(
             }
 
             // 2. Discover active connect port via mDNS
-            val service = withTimeoutOrNull(8000L) {
+            val service = withTimeoutOrNull(4000L) {
                 try {
                     mdnsDiscovery.discoverServices(AdbMdnsDiscovery.SERVICE_TYPE_CONNECT).first()
                 } catch (e: Throwable) {
@@ -235,7 +235,11 @@ class LocalAdbPrivilegeProvider(
                 if (!prefs.isAdbPaired) {
                     _state.value = PrivilegeState.PairingRequired(discoveredPairingPort)
                 } else {
-                    _state.value = PrivilegeState.Disconnected
+                    val lastPort = prefs.lastAdbConnectPort
+                    _state.value = PrivilegeState.ConnectPortRequired(
+                        lastPort = if (lastPort > 0) lastPort else null,
+                        message = "Port koneksi Wireless ADB tidak terdeteksi otomatis lewat mDNS. Masukkan port dari Developer Options."
+                    )
                 }
             }
         }

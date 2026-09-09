@@ -6,6 +6,10 @@ sealed interface PrivilegeState {
         val detectedPort: Int? = null,
         val hostIp: String = "127.0.0.1"
     ) : PrivilegeState
+    data class ConnectPortRequired(
+        val lastPort: Int? = null,
+        val message: String? = null
+    ) : PrivilegeState
     data object Connecting : PrivilegeState
     data class Ready(
         val type: PrivilegeType,

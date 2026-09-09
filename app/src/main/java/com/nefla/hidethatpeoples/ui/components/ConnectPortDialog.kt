@@ -55,7 +55,7 @@ fun ConnectPortDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "If auto-discovery failed, check the active port in Developer Options -> Wireless Debugging -> 'IP address & Port' (e.g. 192.168.1.15:43829).",
+                    text = "Pairing succeeded! On certain devices (such as Xiaomi, HyperOS, or MIUI), the system doesn't broadcast the connect port locally.\n\nOpen Developer Options -> Wireless Debugging, check the port next to 'IP address & Port' (e.g. 10.0.0.54:37467), and enter the 5-digit port below:",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -173,7 +173,7 @@ class AdbMdnsDiscovery(private val context: Context) {
         }
 
         val result = try {
-            kotlinx.coroutines.withTimeoutOrNull(3500L) {
+            kotlinx.coroutines.withTimeoutOrNull(1500L) {
                 deferred.await()
             }
         } finally {

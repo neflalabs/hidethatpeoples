@@ -81,6 +81,12 @@ fun HomeScreen(
     val lastClearedTimestamp by prefs.lastClearedTimestampFlow.collectAsStateWithLifecycle(initialValue = prefs.lastClearedTimestamp)
     var currentTicker by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
+    LaunchedEffect(privilegeState) {
+        if (privilegeState is PrivilegeState.ConnectPortRequired) {
+            showConnectDialog = true
+        }
+    }
+
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -253,6 +259,11 @@ fun HomeScreen(
                                 "Pairing Required",
                                 "Open Wireless Debugging in Developer Options."
                             )
+                            is PrivilegeState.ConnectPortRequired -> Triple(
+                                OrangeWarning,
+                                "Active Port Required",
+                                state.message ?: "Pairing succeeded! Enter active port from Developer Options."
+                            )
                             is PrivilegeState.Connecting -> Triple(
                                 MaterialTheme.colorScheme.primary,
                                 "Connecting...",
@@ -405,6 +416,24 @@ fun HomeScreen(
                                         Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(14.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text("Pair Notification", fontSize = 12.sp)
+                                    }
+                                }
+                                is PrivilegeState.ConnectPortRequired -> {
+                                    OutlinedButton(
+                                        onClick = { openWirelessDebuggingSettings(context) },
+                                        modifier = Modifier.height(34.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    }
+                                    Button(
+                                        onClick = { showConnectDialog = true },
+                                        modifier = Modifier.height(34.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp)
+                                    ) {
+                                        Icon(Icons.Default.WifiTethering, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Enter Port", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                                 is PrivilegeState.Disconnected -> {

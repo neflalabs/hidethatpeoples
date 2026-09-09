@@ -33,10 +33,15 @@ jobs:
         run: ./gradlew test
 
       - name: Decode Release Keystore (Optional Secret)
-        if: env.KEYSTORE_BASE64 != ''
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+            echo "Release keystore decoded successfully."
+          else
+            echo "No KEYSTORE_BASE64 secret found, falling back to debug signature."
+          fi
 
       - name: Build Release APK
         env:

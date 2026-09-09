@@ -19,4 +19,5 @@ local.properties
 *.keystore
 *.jks
 secrets.properties
+keystore.properties
 release_artifacts/

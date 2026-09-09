@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -33,9 +35,11 @@ android {
         create("release") {
             val keystoreFile = rootProject.file("release.keystore")
             val keystorePropsFile = rootProject.file("keystore.properties")
-            val props = java.util.Properties()
+            val props = Properties()
             if (keystorePropsFile.exists()) {
-                keystorePropsFile.inputStream().use { props.load(it) }
+                keystorePropsFile.inputStream().use { stream ->
+                    props.load(stream)
+                }
             }
 
             if (keystoreFile.exists()) {

@@ -12,8 +12,8 @@
 
 # Coroutines & WorkManager
 -keep class androidx.work.** { *; }
--keep class com.nefla.hidethatpeoples.worker.AutoCleanWorker { *; }
+-keep class com.neflalabs.hidethatpeoples.worker.AutoCleanWorker { *; }
 
 # Target App Models & Preferences
--keep class com.nefla.hidethatpeoples.data.TargetApp { *; }
--keep class com.nefla.hidethatpeoples.data.InstalledTargetApp { *; }
+-keep class com.neflalabs.hidethatpeoples.data.TargetApp { *; }
+-keep class com.neflalabs.hidethatpeoples.data.InstalledTargetApp { *; }

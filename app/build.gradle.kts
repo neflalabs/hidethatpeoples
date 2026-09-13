@@ -25,11 +25,11 @@ base {
 }
 
 android {
-    namespace = "com.nefla.hidethatpeoples"
+    namespace = "com.neflalabs.hidethatpeoples"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.nefla.hidethatpeoples"
+        applicationId = "com.neflalabs.hidethatpeoples"
         minSdk = 26
         targetSdk = 35
         versionCode = autoVersionCode

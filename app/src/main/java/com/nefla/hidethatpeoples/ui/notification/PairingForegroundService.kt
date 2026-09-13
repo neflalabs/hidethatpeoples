@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.RemoteInput
+import com.nefla.hidethatpeoples.MainActivity
 import com.nefla.hidethatpeoples.privilege.PrivilegeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,17 @@ class PairingForegroundService : Service() {
                         if (result.isSuccess) {
                             Toast.makeText(applicationContext, "Pairing Successful! Wireless ADB Connected 🟢", Toast.LENGTH_LONG).show()
                             PairingNotificationHelper.showSuccessNotification(applicationContext, "Port $port")
+                            
+                            // Otomatis bawa kembali user ke aplikasi
+                            try {
+                                val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                }
+                                applicationContext.startActivity(openAppIntent)
+                            } catch (e: Exception) {
+                                android.util.Log.e("PairingService", "Failed to auto-open app", e)
+                            }
+
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                 stopForeground(STOP_FOREGROUND_DETACH)
                             } else {

@@ -1134,8 +1134,19 @@ fun HomeScreen(
                         shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                     ) {
+                        val appVersion = remember {
+                            try {
+                                com.nefla.hidethatpeoples.BuildConfig.VERSION_NAME
+                            } catch (e: Throwable) {
+                                try {
+                                    context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+                                } catch (_: Exception) {
+                                    "1.0.0"
+                                }
+                            }
+                        }
                         Text(
-                            text = "v1.0.0 • Privacy Utility",
+                            text = "v$appVersion • Privacy Utility",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

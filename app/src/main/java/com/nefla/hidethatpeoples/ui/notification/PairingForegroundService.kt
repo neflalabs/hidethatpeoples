@@ -118,15 +118,11 @@ class PairingForegroundService : Service() {
                             Toast.makeText(applicationContext, "Pairing Successful! Wireless ADB Connected 🟢", Toast.LENGTH_LONG).show()
                             PairingNotificationHelper.showSuccessNotification(applicationContext, "Port $port")
                             
-                            // Otomatis bawa kembali user ke aplikasi
+                            // Collapse notification shade jika memungkinkan agar notifikasi heads-up langsung terlihat jelas
                             try {
-                                val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                }
-                                applicationContext.startActivity(openAppIntent)
-                            } catch (e: Exception) {
-                                android.util.Log.e("PairingService", "Failed to auto-open app", e)
-                            }
+                                @Suppress("DEPRECATION")
+                                applicationContext.sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+                            } catch (_: Exception) {}
 
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                 stopForeground(STOP_FOREGROUND_DETACH)

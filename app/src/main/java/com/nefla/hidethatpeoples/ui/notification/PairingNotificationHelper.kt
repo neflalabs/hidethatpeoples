@@ -22,19 +22,34 @@ object PairingNotificationHelper {
     @Volatile
     var lastDiscoveredPort: Int? = null
 
+    const val CHANNEL_SUCCESS_ID = "adb_pairing_success"
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Wireless ADB Pairing"
-            val descriptionText = "Notification to enter pairing code without closing Settings"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val pairingChannel = NotificationChannel(
+                CHANNEL_ID,
+                "Wireless ADB Pairing Prompt",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notification to enter pairing code without closing Settings"
                 setShowBadge(false)
                 setSound(null, null)
                 enableVibration(false)
             }
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(pairingChannel)
+
+            val successChannel = NotificationChannel(
+                CHANNEL_SUCCESS_ID,
+                "Pairing Results & Status",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Heads-up notification when ADB pairing completes"
+                setShowBadge(true)
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(successChannel)
         }
     }
 
@@ -125,6 +140,7 @@ object PairingNotificationHelper {
     }
 
     fun showSuccessNotification(context: Context, detail: String) {
+        createNotificationChannel(context)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -136,15 +152,22 @@ object PairingNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, CHANNEL_SUCCESS_ID)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentTitle("Pairing Successful! 🟢")
-            .setContentText("Wireless ADB connected ($detail). Ready to clear Direct Share contacts.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentText("Tap to return to HideThatPeoples ($detail connected)")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "Wireless ADB connected ($detail).\n👉 Ketuk notifikasi ini untuk kembali ke aplikasi."
+            ))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(contentPendingIntent)
-            .setFullScreenIntent(contentPendingIntent, true)
-            .setTimeoutAfter(6000L)
+            .addAction(
+                android.R.drawable.ic_menu_revert,
+                "Buka Aplikasi",
+                contentPendingIntent
+            )
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)

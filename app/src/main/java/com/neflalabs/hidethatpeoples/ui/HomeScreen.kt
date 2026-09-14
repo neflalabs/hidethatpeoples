@@ -43,6 +43,9 @@ import com.neflalabs.hidethatpeoples.data.InstalledTargetApp
 import com.neflalabs.hidethatpeoples.data.TargetAppManager
 import com.neflalabs.hidethatpeoples.privilege.PrivilegeManager
 import com.neflalabs.hidethatpeoples.privilege.PrivilegeState
+import com.neflalabs.hidethatpeoples.updater.AppUpdateManager
+import com.neflalabs.hidethatpeoples.updater.UpdateCheckState
+import kotlinx.coroutines.launch
 import com.neflalabs.hidethatpeoples.ui.components.ConnectPortDialog
 import com.neflalabs.hidethatpeoples.ui.components.PairingBottomSheet
 import com.neflalabs.hidethatpeoples.ui.components.openWirelessDebuggingSettings
@@ -74,6 +77,7 @@ fun HomeScreen(
     var showPairingSheet by remember { mutableStateOf(false) }
     var showConnectDialog by remember { mutableStateOf(false) }
     var showIntervalDialog by remember { mutableStateOf(false) }
+    var updateCheckState by remember { mutableStateOf<UpdateCheckState>(UpdateCheckState.Idle) }
     val enabledPackages by prefs.enabledPackagesFlow.collectAsStateWithLifecycle(initialValue = prefs.enabledPackages)
 
     val autoCleanEnabled by prefs.isAutoCleanEnabledFlow.collectAsStateWithLifecycle(initialValue = prefs.isAutoCleanEnabled)
@@ -1364,13 +1368,167 @@ fun HomeScreen(
                                     )
                                 }
                             }
+
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            )
+
+                            // 4. Check for Updates Row
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = updateCheckState !is UpdateCheckState.Checking && updateCheckState !is UpdateCheckState.Downloading) {
+                                        updateCheckState = UpdateCheckState.Checking
+                                        scope.launch {
+                                            AppUpdateManager.checkLatestRelease().fold(
+                                                onSuccess = { info ->
+                                                    updateCheckState = if (info.isNewer) {
+                                                        UpdateCheckState.UpdateAvailable(info)
+                                                    } else {
+                                                        UpdateCheckState.UpToDate
+                                                    }
+                                                },
+                                                onFailure = { err ->
+                                                    updateCheckState = UpdateCheckState.Error(err.localizedMessage ?: "Failed to check updates")
+                                                }
+                                            )
+                                        }
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "App Update",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = when (val state = updateCheckState) {
+                                            is UpdateCheckState.Checking -> "Checking for updates..."
+                                            is UpdateCheckState.UpToDate -> "You're on the latest version ✓"
+                                            is UpdateCheckState.UpdateAvailable -> "Update available: v${state.info.versionName}"
+                                            is UpdateCheckState.Downloading -> "Downloading update..."
+                                            is UpdateCheckState.Error -> "Check failed (Tap to retry)"
+                                            UpdateCheckState.Idle -> "Check for updates"
+                                        },
+                                        fontWeight = FontWeight.SemiBold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = when (updateCheckState) {
+                                            is UpdateCheckState.UpdateAvailable -> MaterialTheme.colorScheme.primary
+                                            is UpdateCheckState.Error -> MaterialTheme.colorScheme.error
+                                            else -> MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                }
+                                if (updateCheckState is UpdateCheckState.Checking || updateCheckState is UpdateCheckState.Downloading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Check for updates",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Update Available Banner / Action
+                    AnimatedVisibility(visible = updateCheckState is UpdateCheckState.UpdateAvailable) {
+                        val availableState = updateCheckState as? UpdateCheckState.UpdateAvailable
+                        if (availableState != null) {
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.NewReleases,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "New Version: v${availableState.info.versionName}",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    if (availableState.info.releaseNotes.isNotBlank()) {
+                                        Text(
+                                            text = availableState.info.releaseNotes,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 4,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            AppUpdateManager.downloadAndInstall(
+                                                context = context,
+                                                releaseInfo = availableState.info,
+                                                onDownloadStarted = { id ->
+                                                    updateCheckState = UpdateCheckState.Downloading(id)
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar("Downloading HideThatPeoples v${availableState.info.versionName}...")
+                                                    }
+                                                },
+                                                onError = { err ->
+                                                    updateCheckState = UpdateCheckState.Error(err)
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar(err)
+                                                    }
+                                                }
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Download & Install Update", fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
                 FilledTonalButton(
-                    onClick = { showAboutDialog = false },
+                    onClick = {
+                        showAboutDialog = false
+                        updateCheckState = UpdateCheckState.Idle
+                    },
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Close", fontWeight = FontWeight.SemiBold)

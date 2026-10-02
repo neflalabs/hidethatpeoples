@@ -4,6 +4,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B-green.svg)](https://android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2-purple.svg)](https://kotlinlang.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Trakteer](https://img.shields.io/badge/Trakteer-Support-red?logo=trakteer&logoColor=white)](https://trakteer.id/neflalabs)
 
 **HideThatPeoples** (Launcher: *HidePeoples*) is a modern, lightweight Android privacy utility and system management tool built with Jetpack Compose, Material 3, and a **Built-in Standalone Wireless ADB Engine** (with optional Root support).
 
@@ -105,6 +106,14 @@ Output: `app/build/outputs/apk/release/HideThatPeoples-release.apk`
 
 ---
 
+## ☕ Support / Donate
+Jika project ini bermanfaat buat kamu, dukung pengembangannya via Trakteer:
+
+<a href="https://trakteer.id/neflalabs"><img id="wse-buttons-preview" src="https://cdn.trakteer.id/images/embed/trbtn-red.png" height="40" style="border:0px;height:40px;" alt="Trakteer Saya"></a>
+
+---
+
 ## 📄 License
 Released under the [MIT License](LICENSE).  
 Developed with care by **[neflalabs](https://github.com/neflalabs/hidethatpeoples)**.
+

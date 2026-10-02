@@ -109,7 +109,7 @@ Output: `app/build/outputs/apk/release/HideThatPeoples-release.apk`
 ## ☕ Support / Donate
 Jika project ini bermanfaat buat kamu, dukung pengembangannya via Trakteer:
 
-<a href="https://trakteer.id/neflalabs"><img id="wse-buttons-preview" src="https://cdn.trakteer.id/images/embed/trbtn-red.png" height="40" style="border:0px;height:40px;" alt="Trakteer Saya"></a>
+[![Trakteer](https://img.shields.io/badge/Trakteer-Dukung%20di%20Trakteer-be1e2d?style=for-the-badge&logo=trakteer&logoColor=white)](https://trakteer.id/neflalabs)
 
 ---
 
